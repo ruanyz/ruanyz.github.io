@@ -1,0 +1,62 @@
+---
+id: 121
+title: 杂七杂八（一）
+date: 2019-09-06T15:10:24+08:00
+author: MR. ruan
+layout: revision
+guid: http://www.ruanyz.world/121.html
+permalink: /121.html
+---
+在编写fast_decode，xcom模块是遇到的一下bug
+
+  * 首先初次尝试使用vhdl语言进行模块的编写
+      * Vhdl与verilog相比，其对于关键字大小写不敏感，也即是在vhdl在others == OTHERS
+
+Verilo中 always /= ALWAYS
+
+  * Vhdl 相较于verilog’对于逻辑的明确性更强，vhdl必须 &nbsp;if（rst=’1’）then&nbsp; end if；
+
+Verilog 只要 if（rst）begin&nbsp; end
+
+  * Vhdl编写模块的结构性更强。注意（在siganl信号声明结束后有 begin&nbsp;&nbsp; end rtl;）,在进行其他模块使用时也必须对其进行申明，verilog不需要
+      * 在vhdl中的组合逻辑和时序逻辑
+          * 组合 &nbsp;process（rst，clk）
+
+begin 
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if（rst=‘1’）then
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; else
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; end if;
+
+End process；
+
+  * 时序 process （clk，rst）
+
+Begin
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If（rst=‘1’）then
+
+&nbsp;&nbsp;&nbsp;&nbsp; elsif（rasingr_edge(clk)）then
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; end if ;
+
+End&nbsp; process；
+
+  * 在verilog中的组合逻辑和时序逻辑:根据always@（poseedge clk or posedge rst）；always@（rst，clk）
+      * Vhdl对于case的编写，最好加入when others=> ,预防意外状态导致程序卡死或者直接仿真报错
+      * 在状态机中，遇到过这个一种情况，a <= k1;&nbsp; 接着 a<=k2，那么最后的值显然为k2。所以可以这么做，将一些极端情况逻辑判断写在最后。
+      * 在代码编写修改过程中，例化模块的localparam（端口位宽长度需要注意，防止溢出）
+      * 对不同模块，首先我们处理时，选要关注输入数据的时序关系，在状态中，每一拍都需要保保持时序同步
+      * 对于数据delay
+          * 如果数据每个时钟都在变化：
+          * 数据变化无固定时钟周期：需要在每次赋值新数据时将数据打一拍，而不是在时钟的上升沿
+      * Show &nbsp;a head 模式的FIFo:其数据直接裸露在端口，第一个数据不需要是能rd信号，md项目在检测sop时可以直接判断。
+      * Md项目，将数据时序信号与数据拼接缓存至fifo，完全保持时序同步
+      * Md项目，reassembly模块会将协议的头数据和data数据使用两个fifo缓存，这种情况下换遇到这种情况，存储头的可以存一次，但是存储数据的FIFO只存储一班数据，所以在设计FIFO的宽度的上需要满足
+
+Save head muns * max(data lengen) <= save data fifo length
+
+  * 在编写md时，读写信号的操作需要与判断fifo的full和empty，将rd信号使用组合逻辑，可以在本状态操作使能，下一个状态直接出数据。如果使用时序逻辑，那么至少delay两个时钟，无法完成pappleline。
+  * 编写协议解码模块时，首先手动解析一个完整包，弄清解析规则，特别是存在嵌套循环的，这样之后编写代码思路也会很清晰，仿真时，也知道怎么去修改。
